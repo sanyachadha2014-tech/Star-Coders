@@ -4,8 +4,6 @@
 <meta charset="UTF-8">
 <title>Submit Complaint - CivicFix</title>
 
-<link rel="stylesheet" href="style.css">
-
 <style>
 body {
   margin: 0;
@@ -13,7 +11,6 @@ body {
   background: #f4f6fb;
 }
 
-/* NAVBAR */
 .navbar {
   display: flex;
   justify-content: space-between;
@@ -25,7 +22,6 @@ body {
   font-weight: bold;
 }
 
-/* FORM */
 .container {
   max-width: 600px;
   margin: 40px auto;
@@ -33,10 +29,6 @@ body {
   padding: 30px;
   border-radius: 15px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-}
-
-h2 {
-  margin-bottom: 20px;
 }
 
 input, textarea {
@@ -51,7 +43,6 @@ textarea {
   height: 100px;
 }
 
-/* UPLOAD BOX */
 .upload-box {
   border: 2px dashed #ccc;
   padding: 30px;
@@ -71,7 +62,6 @@ textarea {
   border-radius: 10px;
 }
 
-/* BUTTON */
 button {
   margin-top: 20px;
   width: 100%;
@@ -83,7 +73,6 @@ button {
   cursor: pointer;
 }
 
-/* AI BOX */
 .ai-box {
   margin-top: 20px;
   padding: 15px;
@@ -96,13 +85,11 @@ button {
 
 <body>
 
-<!-- NAVBAR -->
 <div class="navbar">
   <div class="logo">CivicFix</div>
-  <button onclick="window.location.href='index.html'">Home</button>
+  <button onclick="window.location.href='dashboard.html'">Dashboard</button>
 </div>
 
-<!-- FORM -->
 <div class="container">
   <h2>Submit Civic Complaint</h2>
 
@@ -111,17 +98,16 @@ button {
     Click to upload photo
   </div>
   <input type="file" id="image" hidden>
-
   <img id="preview" class="preview" style="display:none;">
 
-  <!-- FIELDS -->
+  <!-- FORM -->
   <input type="text" id="title" placeholder="Complaint Title">
   <textarea id="description" placeholder="Describe the issue"></textarea>
   <input type="text" id="location" placeholder="Location">
   <input type="text" id="name" placeholder="Your Name">
   <input type="text" id="contact" placeholder="Contact Number">
 
-  <!-- AI INFO -->
+  <!-- AI RESULT -->
   <div class="ai-box" id="aiBox"></div>
 
   <button onclick="submitComplaint()">Submit Complaint</button>
@@ -129,85 +115,112 @@ button {
 
 <script>
 
-// STORAGE FUNCTIONS
-function getComplaints(){
-  return JSON.parse(localStorage.getItem("complaints")) || [];
-}
+const url = "https://bsfnlqrserdkrcdjqrlc.supabase.co/rest/v1/complaints";
+const key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzZm5scXJzZXJka3JjZGpxcmxjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNDg5MTMsImV4cCI6MjA4OTcyNDkxM30.HvvmFOq3MVvnUmMcSW6-cG6Uyb0m4oPK_Pzvc8ykues";
 
-function saveComplaints(data){
-  localStorage.setItem("complaints", JSON.stringify(data));
-}
-
-// IMAGE PREVIEW
+/* IMAGE PREVIEW */
 let imageData = "";
 
 document.getElementById("image").addEventListener("change", function(e){
   const file = e.target.files[0];
-
   if(file){
     const reader = new FileReader();
+    reader.onload = function(){
+      imageData = reader.result;
 
-    reader.onload = function(event){
-      imageData = event.target.result;
-
-      const img = document.getElementById("preview");
-      img.src = imageData;
-      img.style.display = "block";
+      const preview = document.getElementById("preview");
+      preview.src = imageData;
+      preview.style.display = "block";
     };
-
     reader.readAsDataURL(file);
   }
 });
 
-// MOCK AI
-function generateAI(){
-  const categories = ["Water Issue", "Garbage", "Road Damage"];
-  const category = categories[Math.floor(Math.random()*categories.length)];
+async function submitComplaint(){
+  try{
 
-  return {
-    category,
-    aiConfidence: Math.floor(Math.random()*20)+80,
-    estimatedTime: "1-2 days",
-    priority: Math.random()>0.7 ? "Critical" : "Normal",
-    status: "Pending"
-  };
-}
+    const title = document.getElementById("title").value;
+    const description = document.getElementById("description").value;
+    const location = document.getElementById("location").value;
+    const name = document.getElementById("name").value;
+    const phone = document.getElementById("contact").value;
 
-// SUBMIT
-function submitComplaint(){
+    if(!title || !description || !location){
+      alert("Fill required fields ❗");
+      return;
+    }
 
-  const ai = generateAI();
+    /* SIMPLE AI LOGIC (same as backend) */
+    let category = "General Issue";
+    let priority = "medium";
+    let est_time = "2-3 days";
+    let confidence = 0.9;
+    let ai_label = "Auto Classified";
 
-  const complaint = {
-    title: document.getElementById("title").value,
-    description: document.getElementById("description").value,
-    location: document.getElementById("location").value,
-    name: document.getElementById("name").value,
-    contact: document.getElementById("contact").value,
-    image: imageData,
-    ...ai
-  };
+    const text = (title + " " + description).toLowerCase();
 
-  // SHOW AI INFO
-  document.getElementById("aiBox").style.display = "block";
-  document.getElementById("aiBox").innerHTML = `
-    <b>AI Analysis:</b><br>
-    Category: ${ai.category}<br>
-    Confidence: ${ai.aiConfidence}%<br>
-    Estimated Time: ${ai.estimatedTime}
-  `;
+    if(text.includes("road")){
+      category = "Road Issue";
+      priority = "high";
+      est_time = "1-2 days";
+    }
+    else if(text.includes("water")){
+      category = "Water Issue";
+    }
+    else if(text.includes("electric")){
+      category = "Electric Issue";
+    }
+    else if(text.includes("garbage")){
+      category = "Garbage Issue";
+    }
 
-  setTimeout(()=>{
-    let data = getComplaints();
-    data.push(complaint);
-    saveComplaints(data);
+    /* INSERT INTO SUPABASE */
+    const res = await fetch(url,{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "apikey":key,
+        "Authorization":"Bearer "+key,
+        "Prefer":"return=representation"
+      },
+      body: JSON.stringify({
+        category,
+        description,
+        location,
+        status: "pending",
+        priority,
+        assigned_to: "Auto",
+        est_time,
+        image_url: imageData || null
+      })
+    });
 
-    alert("Complaint Submitted Successfully!");
-    window.location.href = "dashboard.html";
-  }, 1500);
+    if(!res.ok){
+      const err = await res.text();
+      console.log(err);
+      alert("Insert failed ❌");
+      return;
+    }
+
+    const result = await res.json();
+    console.log("Inserted:", result);
+
+    /* SHOW AI BOX */
+    document.getElementById("aiBox").style.display = "block";
+    document.getElementById("aiBox").innerHTML =
+      `Category: ${category}<br>
+       Priority: ${priority}<br>
+       Time: ${est_time}<br>
+       AI: ${ai_label} (${(confidence*100).toFixed(1)}%)`;
+
+    alert("Complaint Submitted ✅");
+
+  }catch(err){
+    console.log(err);
+    alert("Error ❌");
+  }
 }
 
 </script>
-
 </body>
 </html>
